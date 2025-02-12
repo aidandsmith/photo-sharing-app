@@ -12,12 +12,25 @@ const PORT_HTTP = 3000; // Port for HTTP
 
 app.use(helmet());
 
+const validUserIds = ['asmith', 'kfernandez', 'brichards', 'alin'];
+
+// Middleware to check if user exists
+const checkUserExists = (req, res, next) => {
+    const userId = req.params.userId;
+    if (validUserIds.includes(userId)) {
+        next();
+    } else {
+        res.sendFile(path.join(__dirname, '/src/404.html'));
+    }
+};
+
 // Routes for photo sharing app
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/src/index.html'));
 });
 
-app.get('/profile/id', (req, res) => {
+app.get('/profile/:userId', checkUserExists, (req, res) => {
+    const userId = req.params.userId;
     res.sendFile(path.join(__dirname, '/src/profile.html'));
 });
 
@@ -25,10 +38,18 @@ app.get('/feed', (req, res) => {
     res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
+app.get('/post/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, '/src/feed.html'));
+});
+
 app.get('/upload', (req, res) => {
     res.sendFile(path.join(__dirname, '/src/index.html'));
 });
 
+// API endpoint to get all valid users
+app.get('/api/users', (req, res) => {
+    res.json(validUserIds);
+});
 
 const hstsOptions = {
     maxAge: 31536000, 
