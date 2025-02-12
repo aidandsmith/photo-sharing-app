@@ -4,6 +4,7 @@ const fs = require('fs');
 const http = require('http');
 const hsts = require('hsts'); 
 const { default: helmet } = require('helmet');
+const path = require('path');
 
 const app = express();
 const PORT_HTTPS = 3443; // Port for HTTPS
@@ -13,19 +14,19 @@ app.use(helmet());
 
 // Routes for photo sharing app
 app.get('/', (req, res) => {
-    res.send('Hello Word!');
+    res.sendFile(path.join(__dirname, '/src/index.html'));
 });
 
 app.get('/profile/id', (req, res) => {
-    res.send('Hello User!');
+    res.sendFile(path.join(__dirname, '/src/profile.html'));
 });
 
 app.get('/feed', (req, res) => {
-    res.send('Hello Feed!');
+    res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
 app.get('/upload', (req, res) => {
-    res.send('Hello Upload!');
+    res.sendFile(path.join(__dirname, '/src/index.html'));
 });
 
 
