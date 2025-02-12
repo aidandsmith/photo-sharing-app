@@ -2,33 +2,42 @@ const express = require('express');
 const https = require('https');
 const fs = require('fs');
 const http = require('http');
-const hsts = require('hsts'); // Import hsts for HSTS support
+const hsts = require('hsts'); 
+const { default: helmet } = require('helmet');
 
 const app = express();
-const PORT_HTTP = 3000; // Port for HTTP
 const PORT_HTTPS = 3443; // Port for HTTPS
+const PORT_HTTP = 3000; // Port for HTTP
 
-// Sample route for HTTP
+app.use(helmet());
+
+// Routes for photo sharing app
 app.get('/', (req, res) => {
-    res.send('Hello from HTTP!');
+    res.send('Hello Word!');
 });
 
-// Sample route for HTTPS
-app.get('/secure', (req, res) => {
-    res.send('Hello from HTTPS!');
+app.get('/profile/id', (req, res) => {
+    res.send('Hello User!');
 });
+
+app.get('/feed', (req, res) => {
+    res.send('Hello Feed!');
+});
+
+app.get('/upload', (req, res) => {
+    res.send('Hello Upload!');
+});
+
 
 const hstsOptions = {
-    maxAge: 31536000, // 1 year in seconds
-    includeSubDomains: true, // Apply HSTS to all subdomains
-    preload: true // Include this site in the HSTS preload list
+    maxAge: 31536000, 
+    includeSubDomains: true, 
+    preload: true
 };
 
-// Create HTTP server
 http.createServer(app).listen(PORT_HTTP, () => {
     console.log(`HTTP Server running at http://localhost:${PORT_HTTP}`);
 });
-
 
 const sslOptions = {
     key: fs.readFileSync('private-key.pem'), 
@@ -37,7 +46,6 @@ const sslOptions = {
 
 // Create HTTPS server
 const httpsServer = https.createServer(sslOptions, (req, res) => {
-    // Apply HSTS middleware
     hsts(hstsOptions)(req, res, () => {
         app(req, res);
     });
