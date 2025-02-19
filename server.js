@@ -10,6 +10,14 @@ const app = express();
 const PORT_HTTPS = 3443; // Port for HTTPS
 const PORT_HTTP = 3000; // Port for HTTP
 
+// Added caching middleware - **new
+const staticCache = (duration) => {
+    return (req, res, next) => {
+        res.set('Cache-Control', `public, max-age=${duration}`);
+        next();
+    }
+};
+
 app.use(helmet());
 
 const validUserIds = ['asmith', 'kfernandez', 'brichards', 'alin'];
@@ -25,29 +33,49 @@ const checkUserExists = (req, res, next) => {
 };
 
 // Routes for photo sharing app
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '/src/index.html'));
-});
+// app.get('/', (req, res) => {
+//    res.sendFile(path.join(__dirname, '/src/index.html'));
+// });
 
-app.get('/profile/:userId', checkUserExists, (req, res) => {
+app.get('/', staticCache(86400), (req, res) => {  // 24 hours
+    res.sendFile(path.join(__dirname, '/src/index.html'));
+}); // Added Cache with route
+
+// app.get('/profile/:userId', checkUserExists, (req, res) => {
+//     const userId = req.params.userId;
+//    res.sendFile(path.join(__dirname, '/src/profile.html'));
+// });
+
+app.get('/profile/:userId', checkUserExists, (req, res) => { // No Cache
     const userId = req.params.userId;
+    res.set('Cache-Control', 'no-store');  
     res.sendFile(path.join(__dirname, '/src/profile.html'));
 });
 
-app.get('/feed', (req, res) => {
+// app.get('/feed', (req, res) => {
+//    res.sendFile(path.join(__dirname, '/src/feed.html'));
+// });
+
+app.get('/feed', staticCache(300), (req, res) => {  // 5 minutes
     res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
-app.get('/post/:id', (req, res) => {
+//app.get('/post/:id', (req, res) => {
+//    res.sendFile(path.join(__dirname, '/src/feed.html'));
+// });
+
+app.get('/post/:id', staticCache(3600), (req, res) => {  // 1 hour
     res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
 app.get('/upload', (req, res) => {
+    res.set('Cache-Control', 'no-store');  // Disable caching
     res.sendFile(path.join(__dirname, '/src/index.html'));
 });
 
 // API endpoint to get all valid users
 app.get('/api/users', (req, res) => {
+    res.set('Cache-Control', 'no-store');  
     res.json(validUserIds);
 });
 
