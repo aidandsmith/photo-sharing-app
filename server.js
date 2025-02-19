@@ -64,7 +64,7 @@ app.get('/feed', staticCache(300), (req, res) => {  // 5 minutes
 //    res.sendFile(path.join(__dirname, '/src/feed.html'));
 // });
 
-app.get('/post/:id', staticCache(3600), (req, res) => {  // 1 hour
+app.get('/post/:id', staticCache(3600), (req, res) => {  // 1 hour 
     res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
@@ -74,7 +74,7 @@ app.get('/upload', (req, res) => {
 });
 
 // API endpoint to get all valid users
-app.get('/api/users', (req, res) => {
+app.get('/api/users', (req, res) => { // Disable caching
     res.set('Cache-Control', 'no-store');  
     res.json(validUserIds);
 });
