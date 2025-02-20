@@ -32,19 +32,9 @@ const checkUserExists = (req, res, next) => {
     }
 };
 
-// Routes for photo sharing app
-// app.get('/', (req, res) => {
-//    res.sendFile(path.join(__dirname, '/src/index.html'));
-// });
-
 app.get('/', staticCache(86400), (req, res) => {  // 24 hours
     res.sendFile(path.join(__dirname, '/src/index.html'));
-}); // Added Cache with route
-
-// app.get('/profile/:userId', checkUserExists, (req, res) => {
-//     const userId = req.params.userId;
-//    res.sendFile(path.join(__dirname, '/src/profile.html'));
-// });
+}); 
 
 app.get('/profile/:userId', checkUserExists, (req, res) => { // No Cache
     const userId = req.params.userId;
@@ -52,17 +42,9 @@ app.get('/profile/:userId', checkUserExists, (req, res) => { // No Cache
     res.sendFile(path.join(__dirname, '/src/profile.html'));
 });
 
-// app.get('/feed', (req, res) => {
-//    res.sendFile(path.join(__dirname, '/src/feed.html'));
-// });
-
 app.get('/feed', staticCache(300), (req, res) => {  // 5 minutes
     res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
-
-//app.get('/post/:id', (req, res) => {
-//    res.sendFile(path.join(__dirname, '/src/feed.html'));
-// });
 
 app.get('/post/:id', staticCache(3600), (req, res) => {  // 1 hour 
     res.sendFile(path.join(__dirname, '/src/feed.html'));
