@@ -10,7 +10,7 @@ const Signin = () => {
 
   const { session, signInUser } = UserAuth();
   const navigate = useNavigate();
-  console.log(session);
+  console.log(session); // Validate active session
 
   const handleSignIn = async (e) => {
     e.preventDefault()
