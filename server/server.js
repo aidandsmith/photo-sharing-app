@@ -10,30 +10,10 @@ const app = express();
 const PORT_HTTPS = 3443; // Port for HTTPS
 const PORT_HTTP = 3000; // Port for HTTP
 
-// Added caching middleware - **new
-const staticCache = (duration) => {
-    return (req, res, next) => {
-        res.set('Cache-Control', `public, max-age=${duration}`);
-        next();
-    }
-};
-
 app.use(helmet());
 
-const validUserIds = ['asmith', 'kfernandez', 'brichards', 'alin'];
-
-// Middleware to check if user exists
-const checkUserExists = (req, res, next) => {
-    const userId = req.params.userId;
-    if (validUserIds.includes(userId)) {
-        next();
-    } else {
-        res.sendFile(path.join(__dirname, '/src/404.html'));
-    }
-};
-
 app.get('/', staticCache(86400), (req, res) => {  // 24 hours
-    res.sendFile(path.join(__dirname, '/src/index.html'));
+
 }); 
 
 app.get('/profile/:userId', checkUserExists, (req, res) => { // No Cache
