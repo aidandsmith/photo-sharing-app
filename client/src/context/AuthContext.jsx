@@ -1,9 +1,9 @@
 import { createContext, useEffect, useState, useContext } from "react";
 
 const AuthContext = createContext();
-const API_URL = "http://localhost:3000"; // Change to your server URL
+const API_URL = "http://localhost:3000";
 
-// Stores JWT token
+// Store token in localStorage
 const setToken = (token) => {
   if (token) {
     localStorage.setItem('authToken', token);
@@ -12,7 +12,7 @@ const setToken = (token) => {
   }
 };
 
-// Get token
+// Get token from localStorage
 const getToken = () => {
   return localStorage.getItem('authToken');
 };
@@ -20,19 +20,24 @@ const getToken = () => {
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
+  // Check if token, and validate
   useEffect(() => {
-    const checkAuth = async () => {
+    const validateToken = async () => {
+      setLoading(true);
       const token = getToken();
       
       if (!token) {
         setUser(null);
         setLoading(false);
+        setAuthInitialized(true);
         return;
       }
       
       try {
-        const response = await fetch(`${API_URL}/auth/user`, {
+        // Validate the token with the server
+        const response = await fetch(`${API_URL}/auth/validate`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -40,23 +45,27 @@ export const AuthContextProvider = ({ children }) => {
           }
         });
 
-        if (response.ok) {
-          const data = await response.json();
+        const data = await response.json();
+        
+        if (response.ok && data.valid) {
+          console.log("Token validated successfully", data.user);
           setUser(data.user);
         } else {
-          // If token is invalid, clear it
+          console.log("Token invalid, clearing", data.error);
           setToken(null);
           setUser(null);
         }
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error("Token validation error:", error);
+        setToken(null);
         setUser(null);
       } finally {
         setLoading(false);
+        setAuthInitialized(true);
       }
     };
 
-    checkAuth();
+    validateToken();
   }, []);
 
   // Sign up function
@@ -107,8 +116,16 @@ export const AuthContextProvider = ({ children }) => {
         return { success: false, error: data.error };
       }
 
-      setToken(data.token);
-      setUser(data.user);
+      console.log("Sign in successful:", data);
+      
+      if (data.token) {
+        console.log("Saving token and user data");
+        setToken(data.token);
+        setUser(data.user);
+      } else {
+        console.error("No token received from server");
+      }
+      
       return { success: true, data };
     } catch (error) {
       console.error("Signin error:", error);
@@ -185,6 +202,7 @@ export const AuthContextProvider = ({ children }) => {
       value={{
         user,
         loading,
+        authInitialized,
         signUpNewUser,
         signInUser,
         signOut,

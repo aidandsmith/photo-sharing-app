@@ -7,9 +7,12 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
 
+  // Check if token exists in localStorage
+  const hasToken = Boolean(localStorage.getItem('authToken'));
+
   useEffect(() => {
     const checkAuthorization = async () => {
-      if (!user) {
+      if (!user || !hasToken) {
         setAuthorized(false);
         setChecking(false);
         return;
@@ -28,13 +31,13 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     if (!loading) {
       checkAuthorization();
     }
-  }, [user, loading, requireAdmin, hasRole]);
+  }, [user, loading, requireAdmin, hasRole, hasToken]);
 
   if (loading || checking) {
-    return <div>Loading...</div>;
+    return <div className="p-6">Loading authentication...</div>;
   }
 
-  if (!authorized) {
+  if (!authorized || !hasToken) {
     return <Navigate to="/signin" />;
   }
 

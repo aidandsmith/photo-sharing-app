@@ -61,31 +61,31 @@ const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Missing or invalid Authorization header:', authHeader);
     return res.status(401).json({ error: 'No token provided' });
   }
   
   const token = authHeader.split(' ')[1];
   
   try {
-    // Verify token
+    // First verify with our own JWT
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('JWT verified successfully:', decoded);
     
-    // Verify user exists in Supabase
-    const { data, error } = await supabase.auth.getUser(token);
+    // No need to verify with Supabase here - we trust our own JWT
+    // Just set the user from the decoded token
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email
+    };
     
-    if (error || !data.user) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    
-    // Set user data on request
-    req.user = data.user;
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Token expired' });
     }
     console.error('Auth error:', error);
-    return res.status(401).json({ error: 'Authentication failed' });
+    return res.status(401).json({ error: 'Authentication failed: ' + error.message });
   }
 };
 
@@ -131,15 +131,6 @@ app.post('/auth/signup', async (req, res) => {
       return res.status(400).json({ error: error.message });
     }
     
-    if (!data.session) {
-      // If email confirmation is required
-      return res.json({ 
-        message: 'Please check your email to confirm your account',
-        user: data.user,
-        token: null
-      });
-    }
-    
     // Generate JWT token
     const token = generateToken(data.user);
     
@@ -157,10 +148,11 @@ app.post('/auth/signin', async (req, res) => {
   const { email, password } = req.body;
   
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password required' });
+    return res.status(400).json({ error: 'Email and password are required' });
   }
   
   try {
+    // Authenticate with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -170,11 +162,15 @@ app.post('/auth/signin', async (req, res) => {
       return res.status(400).json({ error: error.message });
     }
     
-    // Generate JWT token
+    // Create our own JWT token using the Supabase user data
     const token = generateToken(data.user);
+    console.log('Generated JWT token for:', data.user.email);
     
     return res.json({ 
-      user: data.user,
+      user: {
+        id: data.user.id,
+        email: data.user.email
+      },
       token 
     });
   } catch (error) {
@@ -249,6 +245,33 @@ app.get('/upload', (req, res) => {
 app.get('/api/users', (req, res) => { // Disable caching
   res.set('Cache-Control', 'no-store');  
   res.json([]);
+});
+
+// Route to validate token and return user info
+app.get('/auth/validate', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ valid: false, error: 'No token provided' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // Verify with our JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    return res.json({ 
+      valid: true, 
+      user: {
+        id: decoded.userId,
+        email: decoded.email
+      }
+    });
+  } catch (error) {
+    console.log('Token validation failed:', error.message);
+    return res.status(401).json({ valid: false, error: error.message });
+  }
 });
 
 const hstsOptions = {
