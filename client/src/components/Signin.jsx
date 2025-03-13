@@ -46,7 +46,7 @@ const Signin = () => {
             placeholder="Password" 
             type="password" 
           />
-          <button className="bg-green-500" type="submit" disabled={loading}>Sign Up</button>
+          <button className="bg-green-500" type="submit" disabled={loading}>Sign In</button>
           { error && <p className="text-red-600 font-medium pt-4 text-center">{error}</p>}
         </div>
       </form>

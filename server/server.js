@@ -17,7 +17,7 @@ const supabase = createClient(
 );
 
 // JWT Secret Key
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
+const JWT_SECRET = process.env.JWT_SECRET;
 // JWT Token expiration (1 day)
 const JWT_EXPIRES_IN = '1d';
 
@@ -232,22 +232,11 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Original routes
-app.get('/', staticCache(86400), (req, res) => {  // 24 hours
-  res.sendFile(path.join(__dirname, '/src/index.html'));
-}); 
-
-app.get('/profile/:userId', checkUserExists, (req, res) => { // No Cache
-  const userId = req.params.userId;
-  res.set('Cache-Control', 'no-store');  
-  res.sendFile(path.join(__dirname, '/src/profile.html'));
-});
-
 app.get('/feed', staticCache(300), (req, res) => {  // 5 minutes
   res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
-app.get('/post/:id', staticCache(3600), (req, res) => {  // 1 hour 
+app.get('/posts', staticCache(3600), (req, res) => {  // 1 hour 
   res.sendFile(path.join(__dirname, '/src/feed.html'));
 });
 
