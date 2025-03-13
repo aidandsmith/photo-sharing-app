@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Signup from "./components/Signup.jsx";
 import Signin from "./components/Signin.jsx";
 import Dashboard from "./components/Dashboard.jsx";
+import AdminDashboard from "./components/AdminDashboard.jsx";
 import App from "./App.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -10,4 +11,5 @@ export const router = createBrowserRouter([
   { path: "/signup", element: <Signup /> },
   { path: "/signin", element: <Signin /> },
   { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+  { path: "/admin", element: <ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute> },
 ]);

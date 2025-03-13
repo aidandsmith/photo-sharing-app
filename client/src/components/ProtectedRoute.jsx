@@ -1,30 +1,44 @@
-import React, { useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { UserAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
+import { UserAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ children }) => {
-  const { session } = UserAuth();
-  const navigate = useNavigate();
+const ProtectedRoute = ({ children, requireAdmin = false }) => {
+  const { user, loading, hasRole } = UserAuth();
+  const [authorized, setAuthorized] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-  // If session is explicitly null (not undefined, which is the initial state), 
-  // the user is not authenticated
-  if (session === null) {
+  useEffect(() => {
+    const checkAuthorization = async () => {
+      if (!user) {
+        setAuthorized(false);
+        setChecking(false);
+        return;
+      }
+
+      if (requireAdmin) {
+        const isAdmin = await hasRole("admin");
+        setAuthorized(isAdmin);
+      } else {
+        setAuthorized(true);
+      }
+
+      setChecking(false);
+    };
+
+    if (!loading) {
+      checkAuthorization();
+    }
+  }, [user, loading, requireAdmin, hasRole]);
+
+  if (loading || checking) {
+    return <div>Loading...</div>;
+  }
+
+  if (!authorized) {
     return <Navigate to="/signin" />;
   }
 
-  // When we have a defined session state (either logged in or not)
-  if (session !== undefined) {
-    // If we have session data, render the children
-    if (session) {
-      return children;
-    } else {
-      // Otherwise redirect to signin
-      return <Navigate to="/signin" />;
-    }
-  }
-
-  // Return null while still loading the session
-  return null;
+  return children;
 };
 
 export default ProtectedRoute; 
