@@ -6,23 +6,32 @@ const Signin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const { session, signInUser } = UserAuth();
+  const { user, session, signInUser } = UserAuth();
   const navigate = useNavigate();
-  console.log(session); // Validate active session
+  
+  // If user is already signed in, redirect to dashboard
+  if (user && session) {
+    return <Navigate to="/dashboard" />;
+  }
 
   const handleSignIn = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
     try {
       const result = await signInUser(email, password);
 
-      if(result.success) {
+      if (result.success) {
         navigate('/dashboard');
+      } else {
+        setError(result.error || 'Failed to sign in');
       }
     } catch (err) {
-      setError ('an error occured');
+      console.error(err);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -39,19 +48,27 @@ const Signin = () => {
             className="p-4 mt-2" 
             placeholder="Email" 
             type="email" 
+            required
           />
           <input 
             onChange={(e) => setPassword(e.target.value)} 
             className="p-4 mt-2" 
             placeholder="Password" 
             type="password" 
+            required
           />
-          <button className="bg-green-500" type="submit" disabled={loading}>Sign In</button>
-          { error && <p className="text-red-600 font-medium pt-4 text-center">{error}</p>}
+          <button 
+            className="bg-green-500 p-4 text-white rounded hover:bg-green-600" 
+            type="submit" 
+            disabled={loading}
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
+          </button>
+          {error && <p className="text-red-600 font-medium pt-4 text-center">{error}</p>}
         </div>
       </form>
     </div>
-  )
-}
+  );
+};
 
 export default Signin;

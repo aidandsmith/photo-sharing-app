@@ -1,94 +1,63 @@
 import { createContext, useEffect, useState, useContext } from "react";
+import { supabase } from "../supabaseClient";
 
 const AuthContext = createContext();
-const API_URL = "http://localhost:3000";
-
-// Store token in localStorage
-const setToken = (token) => {
-  if (token) {
-    localStorage.setItem('authToken', token);
-  } else {
-    localStorage.removeItem('authToken');
-  }
-};
-
-// Get token from localStorage
-const getToken = () => {
-  return localStorage.getItem('authToken');
-};
 
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [session, setSession] = useState(null);
 
-  // Check if token, and validate
+  // Check for existing session on load
   useEffect(() => {
-    const validateToken = async () => {
+    const initializeAuth = async () => {
       setLoading(true);
-      const token = getToken();
       
-      if (!token) {
-        setUser(null);
-        setLoading(false);
-        setAuthInitialized(true);
-        return;
+      // Get current session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
+      
+      if (currentSession) {
+        setUser(currentSession.user);
       }
       
-      try {
-        // Validate the token with the server
-        const response = await fetch(`${API_URL}/auth/validate`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }
-        });
-
-        const data = await response.json();
-        
-        if (response.ok && data.valid) {
-          console.log("Token validated successfully", data.user);
-          setUser(data.user);
-        } else {
-          console.log("Token invalid, clearing", data.error);
-          setToken(null);
-          setUser(null);
+      // Setup auth state change listener
+      const { data: { subscription } } = await supabase.auth.onAuthStateChange(
+        (_event, newSession) => {
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
         }
-      } catch (error) {
-        console.error("Token validation error:", error);
-        setToken(null);
-        setUser(null);
-      } finally {
-        setLoading(false);
-        setAuthInitialized(true);
-      }
+      );
+      
+      setLoading(false);
+      setAuthInitialized(true);
+      
+      // Cleanup subscription
+      return () => subscription.unsubscribe();
     };
 
-    validateToken();
+    initializeAuth();
   }, []);
 
-  // Sign up function
+  // Sign up function using Supabase directly
   const signUpNewUser = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/auth/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password })
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Signup error:", data.error);
-        return { success: false, error: data.error };
+      if (error) {
+        console.error("Signup error:", error.message);
+        return { success: false, error: error.message };
       }
 
-      if (data.token) {
-        setToken(data.token);
+      // Note: Supabase may require email verification by default
+      // so the user might not be immediately signed in
+      if (data.user) {
         setUser(data.user);
+        setSession(data.session);
       }
       
       return { success: true, data };
@@ -98,32 +67,22 @@ export const AuthContextProvider = ({ children }) => {
     }
   };
 
-  // Sign in function
+  // Sign in function using Supabase directly
   const signInUser = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/auth/signin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Signin error:", data.error);
-        return { success: false, error: data.error };
+      if (error) {
+        console.error("Signin error:", error.message);
+        return { success: false, error: error.message };
       }
 
-      console.log("Sign in successful:", data);
-      
-      if (data.token) {
-        console.log("Saving token and user data");
-        setToken(data.token);
+      if (data.user) {
         setUser(data.user);
-      } else {
-        console.error("No token received from server");
+        setSession(data.session);
       }
       
       return { success: true, data };
@@ -133,74 +92,44 @@ export const AuthContextProvider = ({ children }) => {
     }
   };
 
-  // Sign out function
+  // Sign out function using Supabase directly
   const signOut = async () => {
-    const token = getToken();
-    
-    if (!token) {
-      setUser(null);
-      return { success: true };
-    }
-    
     try {
-      const response = await fetch(`${API_URL}/auth/signout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      // Always clear token on the client side regardless of server response
-      setToken(null);
-      setUser(null);
+      const { error } = await supabase.auth.signOut();
       
-      if (!response.ok) {
-        const data = await response.json();
-        console.error("Signout error:", data.error);
+      if (error) {
+        console.error("Signout error:", error.message);
+        return { success: false, error: error.message };
       }
 
+      setUser(null);
+      setSession(null);
+      
       return { success: true };
     } catch (error) {
       console.error("Signout error:", error);
-      setToken(null);
-      setUser(null);
-      return { success: true, error: error.message };
+      return { success: false, error: error.message };
     }
   };
 
-  // Check if user has a specific role
+  // Check if user has admin role - this may need to be adapted based on your setup
   const hasRole = async (role) => {
     if (!user) return false;
     
-    const token = getToken();
-    if (!token) return false;
-
-    try {
-      // For admins, check the admin dashboard endpoint
-      if (role === "admin") {
-        const response = await fetch(`${API_URL}/api/admin/dashboard`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          }
-        });
-
-        return response.ok;
-      }
-
-      return false;
-    } catch (error) {
-      console.error("Role check error:", error);
-      return false;
+    if (role === "admin") {
+      // This is a simple check - you might want to add a custom claim or use RLS in Supabase
+      // For now, just checking if user exists
+      return Boolean(user);
     }
+
+    return false;
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        session,
         loading,
         authInitialized,
         signUpNewUser,

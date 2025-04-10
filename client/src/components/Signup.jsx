@@ -6,23 +6,42 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const { session, signUpNewUser } = UserAuth();
+  const { user, session, signUpNewUser } = UserAuth();
   const navigate = useNavigate();
-  console.log(session);
+  
+  // If user is already signed in, redirect to dashboard
+  if (user && session) {
+    return <Navigate to="/dashboard" />;
+  }
 
   const handleSignUp = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+    
     try {
       const result = await signUpNewUser(email, password);
 
-      if(result.success) {
-        navigate('/dashboard');
+      if (result.success) {
+        if (result.data?.session) {
+          // If we get a session back, user is signed in
+          navigate('/dashboard');
+        } else {
+          // Email confirmation may be required - show message
+          setSuccessMessage('Please check your email for a confirmation link before signing in.');
+          setEmail('');
+          setPassword('');
+        }
+      } else {
+        setError(result.error || 'Failed to create account');
       }
     } catch (err) {
-      setError ('an error occured');
+      console.error(err);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -36,22 +55,34 @@ const Signup = () => {
         <div className="flex flex-col gap-5 mt-5">
           <input 
             onChange={(e) => setEmail(e.target.value)} 
+            value={email}
             className="p-4 mt-2" 
             placeholder="Email" 
-            type="email" 
+            type="email"
+            required 
           />
           <input 
-            onChange={(e) => setPassword(e.target.value)} 
+            onChange={(e) => setPassword(e.target.value)}
+            value={password}
             className="p-4 mt-2" 
             placeholder="Password" 
-            type="password" 
+            type="password"
+            required
+            minLength="6" 
           />
-          <button className="bg-green-500" type="submit" disabled={loading}>Sign Up</button>
-          { error && <p className="text-red-600 font-medium pt-4 text-center">{error}</p>}
+          <button 
+            className="bg-green-500 p-4 text-white rounded hover:bg-green-600" 
+            type="submit" 
+            disabled={loading}
+          >
+            {loading ? 'Signing Up...' : 'Sign Up'}
+          </button>
+          {error && <p className="text-red-600 font-medium pt-4 text-center">{error}</p>}
+          {successMessage && <p className="text-green-600 font-medium pt-4 text-center">{successMessage}</p>}
         </div>
       </form>
     </div>
-  )
-}
+  );
+};
 
-export default Signup
+export default Signup;
